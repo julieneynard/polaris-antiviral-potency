@@ -1,0 +1,20 @@
+{
+  "dataset": "asap-discovery/antiviral-potency-2025-unblinded",
+  "split": "official chronological (Set column: Train/Test)",
+  "featurization": "Morgan fingerprint (radius=2, 2048 bits)",
+  "seed": 0,
+  "results": {
+    "pIC50 (SARS-CoV-2 Mpro)": {
+      "n_train": 842,
+      "n_test": 263,
+      "ridge_mae": 0.8189955396253993,
+      "random_forest_mae": 0.6269337686040205
+    },
+    "pIC50 (MERS-CoV Mpro)": {
+      "n_train": 901,
+      "n_test": 297,
+      "ridge_mae": 0.8637224116122911,
+      "random_forest_mae": 0.48815195678526324
+    }
+  }
+}
