@@ -184,6 +184,31 @@ uv run python scripts/run_baseline.py        # Potency
 uv run python scripts/run_admet_baseline.py  # ADMET
 ```
 
+## Tests
+
+```bash
+uv run pytest
+```
+
+15 tests, no network access, runs in a few seconds. These verify the claims made above
+rather than just asserting them in docstrings/comments:
+
+- **Leakage**: `test_train_baseline.py` independently reimplements "scaler fit on train
+  only" and asserts `fit_predict_ridge` matches it exactly, and separately asserts
+  predictions for a fixed set of test rows are unchanged when *other* test rows are
+  added/changed (a leaky train+test-fit scaler would shift every prediction). Verified
+  these actually catch a regression: temporarily reverting the scaler to fit on
+  train+test combined fails both tests with real numeric mismatches, then confirmed
+  clean again after reverting.
+- **Determinism**: bitwise-identical predictions across repeated calls with the same
+  seed (regression test for the `n_jobs=1` fix - see the CV/determinism note above).
+- **Split correctness**: `test_data.py` asserts `official_chronological_split` produces
+  a disjoint, complete partition driven only by the `Set` column value of each row, not
+  row order or position.
+- **CV fold isolation**: `test_cross_validate.py` asserts each fold's train/validation
+  partition is disjoint and covers all rows, and that results are reproducible given a
+  fixed seed.
+
 ## Project structure
 
 ```
@@ -198,6 +223,11 @@ src/
 scripts/
   run_baseline.py        # Potency task entry point
   run_admet_baseline.py  # ADMET task entry point
+tests/
+  test_evaluate.py        # masked_mae vs. sklearn, NaN handling
+  test_data.py             # official_chronological_split correctness
+  test_train_baseline.py   # leakage + determinism checks
+  test_cross_validate.py   # CV fold isolation + determinism
 results/
   potency_metrics.json
   admet_metrics.json
