@@ -1,5 +1,6 @@
 """End-to-end: load Polaris ASAP Potency data -> official chronological split ->
-Morgan FP features -> Ridge & RandomForest baselines -> MAE under the official metric logic.
+Morgan FP features -> 5-fold CV on the train fold (diagnostic) -> fit on full train,
+evaluate on official test (headline) -> MAE under the official metric logic.
 
 Run with:
     uv run python scripts/run_baseline.py
@@ -16,10 +17,13 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from src.cross_validate import cross_validate
 from src.data import load_potency_dataframe, official_chronological_split
 from src.evaluate import masked_mae
 from src.features import featurize
 from src.train_baseline import RANDOM_SEED, fit_predict_random_forest, fit_predict_ridge
+
+N_CV_SPLITS = 5
 
 TARGET_COLUMNS = {
     "pIC50 (SARS-CoV-2 Mpro)": "pic50_sars_cov_2_mpro",
@@ -63,20 +67,28 @@ def main() -> None:
 
         print(f"\n[{target_label}] train n={train_mask.sum()}, test n={test_mask.sum()}")
 
+        print(f"  Running {N_CV_SPLITS}-fold CV on the train fold (diagnostic, not the headline number) ...")
+        ridge_cv = cross_validate(fit_predict_ridge, X_train, y_train, n_splits=N_CV_SPLITS, seed=RANDOM_SEED)
+        rf_cv = cross_validate(fit_predict_random_forest, X_train, y_train, n_splits=N_CV_SPLITS, seed=RANDOM_SEED)
+        print(f"  Ridge         train-fold CV MAE: {ridge_cv['mean_mae']:.4f} +/- {ridge_cv['std_mae']:.4f}")
+        print(f"  RandomForest  train-fold CV MAE: {rf_cv['mean_mae']:.4f} +/- {rf_cv['std_mae']:.4f}")
+
         ridge_pred = fit_predict_ridge(X_train, y_train, X_test, seed=RANDOM_SEED)
         rf_pred = fit_predict_random_forest(X_train, y_train, X_test, seed=RANDOM_SEED)
 
         ridge_mae = masked_mae(y_test, ridge_pred)
         rf_mae = masked_mae(y_test, rf_pred)
 
-        print(f"  Ridge MAE:         {ridge_mae:.4f}")
-        print(f"  RandomForest MAE:  {rf_mae:.4f}")
+        print(f"  Ridge         official test MAE: {ridge_mae:.4f}")
+        print(f"  RandomForest  official test MAE: {rf_mae:.4f}")
 
         results[target_label] = {
             "n_train": int(train_mask.sum()),
             "n_test": int(test_mask.sum()),
             "ridge_mae": ridge_mae,
             "random_forest_mae": rf_mae,
+            "ridge_train_cv": ridge_cv,
+            "random_forest_train_cv": rf_cv,
         }
 
     RESULTS_PATH.parent.mkdir(exist_ok=True, parents=True)
@@ -87,6 +99,12 @@ def main() -> None:
                 "split": "official chronological (Set column: Train/Test)",
                 "featurization": "Morgan fingerprint (radius=2, 2048 bits)",
                 "seed": RANDOM_SEED,
+                "note": (
+                    "ridge_mae / random_forest_mae are the headline numbers: fit on the full "
+                    "official train fold, scored on the official chronological test fold. "
+                    "*_train_cv are a diagnostic only: 5-fold CV within the train fold, used to "
+                    "gauge variance - never a substitute for the chronological test evaluation."
+                ),
                 "results": results,
             },
             f,

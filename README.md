@@ -41,6 +41,14 @@ accuracy from a fancier model.
   [`src/train_baseline.py`](src/train_baseline.py).
 - **Baseline models**: Morgan fingerprints (RDKit, radius=2, 2048 bits) + Ridge
   regression and RandomForest — deliberately simple, CPU-only, no deep learning.
+- **Cross-validation (diagnostic, not headline)**: 5-fold CV on the train fold only,
+  reported as an internal stability check (mean ± std MAE across folds). This is a
+  random split *within* the training data — it never touches the test fold, so it
+  cannot leak into or replace the headline chronological-test number; it exists purely
+  to show how much a model's error varies depending on which training rows it sees. Any
+  per-fold data-dependent step (Ridge's `StandardScaler`) is fit on that fold's training
+  partition only, same as the full pipeline. See
+  [`src/cross_validate.py`](src/cross_validate.py).
 - **Determinism**: all seeds fixed (`RANDOM_SEED = 0` in
   [`src/train_baseline.py`](src/train_baseline.py)); RandomForest is run with
   `n_jobs=1` because parallel tree aggregation can otherwise change floating-point
@@ -48,15 +56,20 @@ accuracy from a fancier model.
   `random_state`. Verified: two full runs of the pipeline produce byte-identical
   `results/baseline_metrics.json`.
 
-## Results (official chronological split)
+## Results
 
-| Target | n train | n test | Ridge MAE | RandomForest MAE |
-|---|---|---|---|---|
-| pIC50 (SARS-CoV-2 Mpro) | 842 | 263 | 0.819 | 0.627 |
-| pIC50 (MERS-CoV Mpro) | 901 | 297 | 0.864 | 0.488 |
+| Target | n train | n test | Ridge 5-fold train-CV MAE | Ridge **official test MAE** | RF 5-fold train-CV MAE | RF **official test MAE** |
+|---|---|---|---|---|---|---|
+| pIC50 (SARS-CoV-2 Mpro) | 842 | 263 | 0.710 ± 0.043 | **0.819** | 0.461 ± 0.056 | **0.627** |
+| pIC50 (MERS-CoV Mpro) | 901 | 297 | 0.829 ± 0.031 | **0.864** | 0.509 ± 0.032 | **0.488** |
 
-(Regenerate with `uv run python scripts/run_baseline.py`; full numbers in
-[`results/baseline_metrics.json`](results/baseline_metrics.json).)
+The bold columns are the headline numbers (official chronological test fold). Note that
+for the SARS-CoV-2 target, the train-fold CV error is noticeably lower than the
+chronological-test error — exactly the generalization gap a random split would have
+hidden, and the reason the task's official split is temporal rather than random.
+
+(Regenerate with `uv run python scripts/run_baseline.py`; full numbers, including
+per-fold CV values, in [`results/baseline_metrics.json`](results/baseline_metrics.json).)
 
 ## Setup
 
@@ -78,10 +91,11 @@ uv run python scripts/run_baseline.py
 
 ```
 src/
-  data.py            # load dataset from Polaris Hub, build official chronological split
-  features.py         # Morgan fingerprint featurization (RDKit)
-  evaluate.py          # MAE harness matching polaris' own metric logic
-  train_baseline.py    # leakage-free Ridge / RandomForest baselines
+  data.py              # load dataset from Polaris Hub, build official chronological split
+  features.py          # Morgan fingerprint featurization (RDKit)
+  evaluate.py           # MAE harness matching polaris' own metric logic
+  train_baseline.py     # leakage-free Ridge / RandomForest baselines
+  cross_validate.py     # 5-fold CV on the train fold (diagnostic only)
 scripts/
   run_baseline.py      # end-to-end pipeline
 results/
@@ -91,6 +105,5 @@ results/
 ## Scope
 
 This is an initial baseline. Deliberately out of scope for now: graph neural networks
-or other deep models, hyperparameter tuning, and cross-validation beyond the single
-official split — see the project's hard rules for why (CPU-only laptop reproducibility,
-start simple before adding complexity).
+or other deep models, and hyperparameter tuning — see the project's hard rules for why
+(CPU-only laptop reproducibility, start simple before adding complexity).

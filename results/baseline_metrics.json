@@ -3,18 +3,67 @@
   "split": "official chronological (Set column: Train/Test)",
   "featurization": "Morgan fingerprint (radius=2, 2048 bits)",
   "seed": 0,
+  "note": "ridge_mae / random_forest_mae are the headline numbers: fit on the full official train fold, scored on the official chronological test fold. *_train_cv are a diagnostic only: 5-fold CV within the train fold, used to gauge variance - never a substitute for the chronological test evaluation.",
   "results": {
     "pIC50 (SARS-CoV-2 Mpro)": {
       "n_train": 842,
       "n_test": 263,
       "ridge_mae": 0.8189955396253993,
-      "random_forest_mae": 0.6269337686040205
+      "random_forest_mae": 0.6269337686040205,
+      "ridge_train_cv": {
+        "n_splits": 5,
+        "fold_maes": [
+          0.7485562072503291,
+          0.7577426253025835,
+          0.6865353926850979,
+          0.6398025083984535,
+          0.7153702568918506
+        ],
+        "mean_mae": 0.7096013981056629,
+        "std_mae": 0.04306334927438549
+      },
+      "random_forest_train_cv": {
+        "n_splits": 5,
+        "fold_maes": [
+          0.5399283054808436,
+          0.49274606251440733,
+          0.37182626665464164,
+          0.4466530880617399,
+          0.4554657036865241
+        ],
+        "mean_mae": 0.46132388527963125,
+        "std_mae": 0.05554346481715528
+      }
     },
     "pIC50 (MERS-CoV Mpro)": {
       "n_train": 901,
       "n_test": 297,
       "ridge_mae": 0.8637224116122911,
-      "random_forest_mae": 0.48815195678526324
+      "random_forest_mae": 0.48815195678526324,
+      "ridge_train_cv": {
+        "n_splits": 5,
+        "fold_maes": [
+          0.8132581521594924,
+          0.8901581483639885,
+          0.821813009780047,
+          0.8038030825689396,
+          0.8157129976186095
+        ],
+        "mean_mae": 0.8289490780982154,
+        "std_mae": 0.03114865592052849
+      },
+      "random_forest_train_cv": {
+        "n_splits": 5,
+        "fold_maes": [
+          0.561973057616415,
+          0.46461488765832937,
+          0.514077390143498,
+          0.507277474955909,
+          0.4962809199158877
+        ],
+        "mean_mae": 0.5088447460580078,
+        "std_mae": 0.03151693034946488
+      }
     }
   }
 }
