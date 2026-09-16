@@ -1,10 +1,11 @@
-"""Plots for the results write-up. Consumes predictions/metrics already computed by
-scripts/run_baseline.py - never refits a model, so the plots can't drift from the
-numbers reported in results/baseline_metrics.json and the README.
+"""Plots for the results write-up. Consumes predictions/metrics already computed by the
+run scripts (scripts/run_baseline.py, scripts/run_admet_baseline.py) - never refits a
+model, so the plots can't drift from the numbers in results/*.json and the README.
 """
 
 from __future__ import annotations
 
+import math
 from pathlib import Path
 
 import matplotlib
@@ -17,18 +18,20 @@ PLOTS_DIR = Path(__file__).resolve().parent.parent / "results" / "plots"
 
 
 def parity_plot(y_true: np.ndarray, y_pred: np.ndarray, target_label: str, mae: float, out_path: Path) -> None:
-    """Predicted vs. actual pIC50 on the official chronological test fold."""
+    """Predicted vs. actual value on the official chronological test fold."""
     fig, ax = plt.subplots(figsize=(5, 5))
 
-    lo = min(y_true.min(), y_pred.min()) - 0.3
-    hi = max(y_true.max(), y_pred.max()) + 0.3
+    lo = min(y_true.min(), y_pred.min())
+    hi = max(y_true.max(), y_pred.max())
+    pad = (hi - lo) * 0.05 or 0.3
+    lo, hi = lo - pad, hi + pad
     ax.plot([lo, hi], [lo, hi], color="gray", linestyle="--", linewidth=1, label="y = x")
 
     ax.scatter(y_true, y_pred, alpha=0.6, s=25, edgecolor="none")
     ax.set_xlim(lo, hi)
     ax.set_ylim(lo, hi)
-    ax.set_xlabel("Actual pIC50")
-    ax.set_ylabel("Predicted pIC50")
+    ax.set_xlabel("Actual")
+    ax.set_ylabel("Predicted")
     ax.set_title(f"{target_label}\nRandomForest, official test fold (MAE = {mae:.3f})")
     ax.legend(loc="upper left", frameon=False)
     ax.set_aspect("equal", adjustable="box")
@@ -39,36 +42,46 @@ def parity_plot(y_true: np.ndarray, y_pred: np.ndarray, target_label: str, mae: 
     plt.close(fig)
 
 
-def cv_vs_test_bar_chart(results: dict, out_path: Path) -> None:
-    """Grouped bars: train-fold CV MAE (mean +/- std) vs. official test MAE, per model per target."""
+def cv_vs_test_grid(results: dict, out_path: Path, target_labels: dict[str, str] | None = None) -> None:
+    """Small multiples: one subplot per target, each with its own MAE scale.
+
+    Endpoints with very different natural units (e.g. ADMET's KSOL in uM vs. LogD,
+    dimensionless) would be visually misleading on one shared axis, so each target gets
+    its own subplot rather than being crammed into a single combined bar chart.
+    """
     targets = list(results.keys())
+    target_labels = target_labels or {}
     models = [("ridge", "Ridge"), ("random_forest", "RandomForest")]
 
-    fig, ax = plt.subplots(figsize=(7, 5))
-    n_groups = len(targets) * len(models)
-    x = np.arange(n_groups)
+    n_cols = min(3, len(targets))
+    n_rows = math.ceil(len(targets) / n_cols)
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(4 * n_cols, 4 * n_rows), squeeze=False)
+
+    x = np.arange(len(models))
     width = 0.35
 
-    cv_means, cv_stds, test_vals, labels = [], [], [], []
-    for target in targets:
-        for key, name in models:
-            cv = results[target][f"{key}_train_cv"]
-            cv_means.append(cv["mean_mae"])
-            cv_stds.append(cv["std_mae"])
-            test_vals.append(results[target][f"{key}_mae"])
-            short_target = "SARS-CoV-2" if "SARS" in target else "MERS-CoV"
-            labels.append(f"{name}\n{short_target}")
+    for i, target in enumerate(targets):
+        ax = axes[i // n_cols][i % n_cols]
+        cv_means = [results[target][f"{key}_train_cv"]["mean_mae"] for key, _ in models]
+        cv_stds = [results[target][f"{key}_train_cv"]["std_mae"] for key, _ in models]
+        test_vals = [results[target][f"{key}_mae"] for key, _ in models]
 
-    ax.bar(x - width / 2, cv_means, width, yerr=cv_stds, capsize=4, label="Train-fold CV MAE (mean ± std)")
-    ax.bar(x + width / 2, test_vals, width, label="Official chronological test MAE")
+        ax.bar(x - width / 2, cv_means, width, yerr=cv_stds, capsize=4, label="Train-fold CV MAE (mean ± std)")
+        ax.bar(x + width / 2, test_vals, width, label="Official chronological test MAE")
+        ax.set_xticks(x)
+        ax.set_xticklabels([name for _, name in models])
+        ax.set_ylabel("MAE")
+        ax.set_title(target_labels.get(target, target), fontsize=10)
 
-    ax.set_xticks(x)
-    ax.set_xticklabels(labels, fontsize=8)
-    ax.set_ylabel("MAE (pIC50 units)")
-    ax.set_title("Train-fold CV vs. official chronological test MAE")
-    ax.legend(frameon=False)
-    fig.tight_layout()
+    # Hide any unused subplot cells.
+    for j in range(len(targets), n_rows * n_cols):
+        axes[j // n_cols][j % n_cols].axis("off")
+
+    handles, labels = axes[0][0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc="lower center", ncol=2, frameon=False, bbox_to_anchor=(0.5, -0.02))
+    fig.suptitle("Train-fold CV vs. official chronological test MAE")
+    fig.tight_layout(rect=(0, 0.04, 1, 1))
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out_path, dpi=150)
+    fig.savefig(out_path, dpi=150, bbox_inches="tight")
     plt.close(fig)

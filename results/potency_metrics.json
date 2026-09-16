@@ -3,7 +3,6 @@
   "split": "official chronological (Set column: Train/Test)",
   "featurization": "Morgan fingerprint (radius=2, 2048 bits)",
   "seed": 0,
-  "note": "ridge_mae / random_forest_mae are the headline numbers: fit on the full official train fold, scored on the official chronological test fold. *_train_cv are a diagnostic only: 5-fold CV within the train fold, used to gauge variance - never a substitute for the chronological test evaluation.",
   "results": {
     "pIC50 (SARS-CoV-2 Mpro)": {
       "n_train": 842,

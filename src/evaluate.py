@@ -6,19 +6,18 @@ project's .venv):
   - Rows where y_true is NaN are masked out before scoring (`mask_index`).
   - Multi-task aggregation is explicitly NOT supported by polaris
     (`NotImplementedError("Multitask metrics are not yet supported...")`), so each
-    pIC50 target (SARS-CoV-2 Mpro, MERS-CoV Mpro) is scored independently, not averaged
-    together. We reproduce that per-target, NaN-masked scoring here.
+    target is scored independently, not averaged together. We reproduce that
+    per-target, NaN-masked scoring here.
+
+Used for both tasks (potency, ADMET). For ADMET this is a deliberate simplification:
+see src/data.py for why the official log-transformed/clipped ADMET metric isn't
+reproduced here.
 """
 
 from __future__ import annotations
 
 import numpy as np
 from sklearn.metrics import mean_absolute_error
-
-TARGET_COLS = {
-    "pic50_sars_cov_2_mpro": "pIC50 (SARS-CoV-2 Mpro)",
-    "pic50_mers_cov_mpro": "pIC50 (MERS-CoV Mpro)",
-}
 
 
 def masked_mae(y_true: np.ndarray, y_pred: np.ndarray) -> float:
@@ -29,12 +28,3 @@ def masked_mae(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     if mask.sum() == 0:
         raise ValueError("No non-NaN labels to score against.")
     return float(mean_absolute_error(y_true[mask], y_pred[mask]))
-
-
-def evaluate_predictions(y_true_by_target: dict[str, np.ndarray], y_pred_by_target: dict[str, np.ndarray]) -> dict[str, float]:
-    """Compute per-target MAE, mirroring polaris' benchmark.evaluate() semantics."""
-    results = {}
-    for col, y_true in y_true_by_target.items():
-        y_pred = y_pred_by_target[col]
-        results[col] = masked_mae(y_true, y_pred)
-    return results
