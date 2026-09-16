@@ -63,13 +63,43 @@ accuracy from a fancier model.
 | pIC50 (SARS-CoV-2 Mpro) | 842 | 263 | 0.710 ± 0.043 | **0.819** | 0.461 ± 0.056 | **0.627** |
 | pIC50 (MERS-CoV Mpro) | 901 | 297 | 0.829 ± 0.031 | **0.864** | 0.509 ± 0.032 | **0.488** |
 
-The bold columns are the headline numbers (official chronological test fold). Note that
-for the SARS-CoV-2 target, the train-fold CV error is noticeably lower than the
-chronological-test error — exactly the generalization gap a random split would have
-hidden, and the reason the task's official split is temporal rather than random.
+The bold columns are the headline numbers (official chronological test fold).
 
-(Regenerate with `uv run python scripts/run_baseline.py`; full numbers, including
-per-fold CV values, in [`results/baseline_metrics.json`](results/baseline_metrics.json).)
+(Regenerate everything below with `uv run python scripts/run_baseline.py`; full numbers,
+including per-fold CV values, in
+[`results/baseline_metrics.json`](results/baseline_metrics.json). Plots are written to
+[`results/plots/`](results/plots/) from the predictions actually scored above — they are
+never a separately-recomputed figure, so they can't drift from the numbers in the table.)
+
+### Write-up
+
+**The chronological split exposes a real generalization gap — a random split would have
+hidden it.** For SARS-CoV-2 Mpro, RandomForest's train-fold CV MAE (0.461) is ~36% lower
+than its official chronological-test MAE (0.627); for Ridge, 0.710 vs. 0.819. Both models
+look meaningfully better than they actually are on genuinely prospective data if you only
+look at (random-split) cross-validation. For MERS-CoV Mpro the gap nearly disappears
+(RandomForest: 0.509 CV vs. 0.488 test) — the harder, more realistic evaluation is
+target-dependent, not a fixed penalty.
+
+![Train-fold CV vs. official chronological test MAE](results/plots/cv_vs_test_mae.png)
+
+**RandomForest compresses predictions at the high-potency extreme — the practically
+important region.** In the SARS-CoV-2 parity plot, points above the true pIC50 ≈ 7 are
+systematically under-predicted (blue points falling below the y = x line at the top
+right): the model regresses toward the bulk of the training distribution and can't
+extrapolate to the most potent compounds. That's a real limitation for prospective drug
+discovery, since the whole point of the exercise is finding compounds *better* than
+what's already been made — an aggregate MAE alone hides this.
+
+![Predicted vs. actual pIC50, SARS-CoV-2 Mpro](results/plots/parity_pic50_sars_cov_2_mpro.png)
+
+**MERS-CoV Mpro predictions are comparatively well calibrated across the range**, tracking
+the y = x line more closely with fewer high-end outliers, other than two low-predicted
+points near pIC50 ≈ 9 (the single most potent compounds in the test set — an
+extrapolation failure in the same direction as above, just for a smaller fraction of the
+data given the label distribution here).
+
+![Predicted vs. actual pIC50, MERS-CoV Mpro](results/plots/parity_pic50_mers_cov_mpro.png)
 
 ## Setup
 

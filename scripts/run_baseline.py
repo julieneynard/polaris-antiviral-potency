@@ -21,6 +21,7 @@ from src.cross_validate import cross_validate
 from src.data import load_potency_dataframe, official_chronological_split
 from src.evaluate import masked_mae
 from src.features import featurize
+from src.plots import PLOTS_DIR, cv_vs_test_bar_chart, parity_plot
 from src.train_baseline import RANDOM_SEED, fit_predict_random_forest, fit_predict_ridge
 
 N_CV_SPLITS = 5
@@ -91,6 +92,10 @@ def main() -> None:
             "random_forest_train_cv": rf_cv,
         }
 
+        parity_path = PLOTS_DIR / f"parity_{target_col}.png"
+        parity_plot(y_test, rf_pred, target_label, rf_mae, parity_path)
+        print(f"  Saved parity plot to {parity_path}")
+
     RESULTS_PATH.parent.mkdir(exist_ok=True, parents=True)
     with open(RESULTS_PATH, "w") as f:
         json.dump(
@@ -111,6 +116,10 @@ def main() -> None:
             indent=2,
         )
     print(f"\nSaved results to {RESULTS_PATH}")
+
+    bar_chart_path = PLOTS_DIR / "cv_vs_test_mae.png"
+    cv_vs_test_bar_chart(results, bar_chart_path)
+    print(f"Saved CV-vs-test bar chart to {bar_chart_path}")
 
 
 if __name__ == "__main__":

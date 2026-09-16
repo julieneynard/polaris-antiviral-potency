@@ -807,6 +807,7 @@ name = "polaris-antiviral-potency"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "matplotlib" },
     { name = "numpy" },
     { name = "pandas" },
     { name = "polaris-lib" },
@@ -816,6 +817,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "matplotlib", specifier = "==3.11.2" },
     { name = "numpy", specifier = "==2.5.3" },
     { name = "pandas", specifier = "==3.0.5" },
     { name = "polaris-lib", specifier = "==0.13.0" },
