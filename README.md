@@ -75,6 +75,12 @@ model.
   summation order across runs, breaking bit-for-bit reproducibility even with a fixed
   `random_state`. Verified: repeated runs of both pipelines produce byte-identical
   `results/*.json`.
+- **Applicability domain**: for every target, each test molecule's error is paired with
+  its max Morgan-fingerprint Tanimoto similarity to its nearest training molecule (same
+  fingerprint definition as the modeling features), then correlated - the question being
+  whether the model does worse on structurally novel test molecules than on ones close
+  to something it was trained on. See [`src/applicability_domain.py`](src/applicability_domain.py)
+  and the write-ups below; the result differs meaningfully between the two tasks.
 
 Both tasks share the same pipeline ([`src/pipeline.py`](src/pipeline.py)) — they only
 differ in dataset, target columns, and (for ADMET) the metric caveat above.
@@ -124,6 +130,21 @@ data given the label distribution here).
 
 ![Predicted vs. actual pIC50, MERS-CoV Mpro](results/plots/potency_parity_pic50__mers_cov_mpro.png)
 
+**The applicability-domain signal is weak here, and the reason why is itself
+informative.** Similarity-vs-error correlation is essentially flat (SARS-CoV-2 Mpro:
+Pearson r = -0.09; MERS-CoV Mpro: r = +0.10 - the *wrong* sign). Binning into similarity
+tertiles shows a small, expected-direction trend for SARS-CoV-2 (mean |error| 0.657 →
+0.629 → 0.595 from low to high similarity) but essentially none for MERS-CoV. The scatter
+plot below shows why a naive AD story doesn't hold up: a large cluster of test molecules
+sits at similarity = 1.0 (an exact fingerprint match to some training molecule) and
+*still* spans nearly the full range of observed errors, from ~0 to >2 pIC50 units. That's
+consistent with **activity cliffs** - well documented in SAR-heavy potency datasets like
+this one, where structurally near-identical analogs (often differing by a single
+substituent) can have sharply different potency. A coarse structural-similarity measure
+can't anticipate that, no matter how "in-domain" the molecule looks.
+
+![Applicability domain: similarity vs. error, SARS-CoV-2 Mpro](results/plots/potency_ad_pic50__sars_cov_2_mpro.png)
+
 ## Results — ADMET
 
 | Endpoint | n train | n test | Ridge test MAE | RF test MAE |
@@ -167,6 +188,24 @@ splits on order statistics, not squared error) helps more than Ridge's global li
 
 ![Train-fold CV vs. official chronological test MAE, ADMET](results/plots/admet_cv_vs_test_mae.png)
 
+**Unlike potency, the applicability-domain effect is clear and consistent across every
+ADMET endpoint** - all five show a negative similarity-error correlation (MLM: r = -0.24,
+HLM: -0.04, KSOL: -0.17, LogD: **-0.54**, MDR1-MDCKII: -0.33), the expected direction
+where structurally novel test molecules are harder to predict. LogD shows this most
+cleanly: mean absolute error drops monotonically from 0.99 (least similar third of test
+molecules) to 0.60 to 0.40 (most similar third). This is a meaningful contrast with
+potency, where the same diagnostic found essentially no signal - plausibly because the
+ADMET training set is more structurally diverse (no molecules here have an exact
+fingerprint match in training, unlike potency's SAR-series duplicates), so similarity to
+the nearest neighbor is actually informative rather than swamped by activity-cliff noise.
+
+![Applicability domain: similarity vs. error, LogD](results/plots/admet_ad_logd.png)
+
+(Per-endpoint Pearson r and similarity-tertile MAE breakdowns for both tasks are in
+`results/*_metrics.json` under `random_forest_applicability_domain`; all seven AD plots -
+two potency, five ADMET, though only one of each is embedded here - are in
+[`results/plots/`](results/plots/).)
+
 ## Setup
 
 ```bash
@@ -190,8 +229,9 @@ uv run python scripts/run_admet_baseline.py  # ADMET
 uv run pytest
 ```
 
-15 tests, no network access, runs in a few seconds. These verify the claims made above
-rather than just asserting them in docstrings/comments:
+20 tests, no network access, runs in under two minutes (dominated by RandomForest's 500
+trees across several tests). These verify the claims made above rather than just
+asserting them in docstrings/comments:
 
 - **Leakage**: `test_train_baseline.py` independently reimplements "scaler fit on train
   only" and asserts `fit_predict_ridge` matches it exactly, and separately asserts
@@ -208,26 +248,32 @@ rather than just asserting them in docstrings/comments:
 - **CV fold isolation**: `test_cross_validate.py` asserts each fold's train/validation
   partition is disjoint and covers all rows, and that results are reproducible given a
   fixed seed.
+- **Applicability domain**: `test_applicability_domain.py` asserts an exact-duplicate
+  molecule gets similarity 1.0, nearest-neighbor similarity is a max (not mean) over
+  training molecules, and the correlation/binning math correctly recovers a known
+  synthetic similarity-error relationship.
 
 ## Project structure
 
 ```
 src/
-  data.py               # load datasets from Polaris Hub, build official chronological split
-  features.py           # Morgan fingerprint featurization (RDKit)
-  evaluate.py            # MAE harness matching polaris' own metric logic
-  train_baseline.py      # leakage-free Ridge / RandomForest baselines
-  cross_validate.py      # 5-fold CV on the train fold (diagnostic only)
-  plots.py                # parity plots + CV-vs-test grid, from already-computed predictions
-  pipeline.py             # shared end-to-end pipeline used by both tasks
+  data.py                    # load datasets from Polaris Hub, build official chronological split
+  features.py                # Morgan fingerprint featurization (RDKit)
+  evaluate.py                 # MAE harness matching polaris' own metric logic
+  train_baseline.py           # leakage-free Ridge / RandomForest baselines
+  cross_validate.py           # 5-fold CV on the train fold (diagnostic only)
+  applicability_domain.py     # nearest-neighbor similarity vs. error diagnostic
+  plots.py                     # parity/AD plots + CV-vs-test grid, from already-computed predictions
+  pipeline.py                  # shared end-to-end pipeline used by both tasks
 scripts/
   run_baseline.py        # Potency task entry point
   run_admet_baseline.py  # ADMET task entry point
 tests/
-  test_evaluate.py        # masked_mae vs. sklearn, NaN handling
-  test_data.py             # official_chronological_split correctness
-  test_train_baseline.py   # leakage + determinism checks
-  test_cross_validate.py   # CV fold isolation + determinism
+  test_evaluate.py                # masked_mae vs. sklearn, NaN handling
+  test_data.py                     # official_chronological_split correctness
+  test_train_baseline.py           # leakage + determinism checks
+  test_cross_validate.py           # CV fold isolation + determinism
+  test_applicability_domain.py     # similarity computation + correlation/binning math
 results/
   potency_metrics.json
   admet_metrics.json

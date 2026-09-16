@@ -32,6 +32,35 @@
         ],
         "mean_mae": 0.46132388527963125,
         "std_mae": 0.05554346481715528
+      },
+      "random_forest_applicability_domain": {
+        "similarity_error_pearson_r": -0.09143925045343515,
+        "bins_low_to_high_similarity": [
+          {
+            "similarity_range": [
+              0.202,
+              0.77
+            ],
+            "n": 89,
+            "mean_abs_error": 0.656741553504549
+          },
+          {
+            "similarity_range": [
+              0.77,
+              0.82
+            ],
+            "n": 86,
+            "mean_abs_error": 0.6292467564599501
+          },
+          {
+            "similarity_range": [
+              0.82,
+              1.0
+            ],
+            "n": 88,
+            "mean_abs_error": 0.5945268389249639
+          }
+        ]
       }
     },
     "pIC50 (MERS-CoV Mpro)": {
@@ -62,6 +91,35 @@
         ],
         "mean_mae": 0.5088447460580078,
         "std_mae": 0.03151693034946488
+      },
+      "random_forest_applicability_domain": {
+        "similarity_error_pearson_r": 0.10454397126514586,
+        "bins_low_to_high_similarity": [
+          {
+            "similarity_range": [
+              0.181,
+              0.768
+            ],
+            "n": 99,
+            "mean_abs_error": 0.44737181652017854
+          },
+          {
+            "similarity_range": [
+              0.768,
+              0.815
+            ],
+            "n": 99,
+            "mean_abs_error": 0.44609866394099634
+          },
+          {
+            "similarity_range": [
+              0.815,
+              1.0
+            ],
+            "n": 99,
+            "mean_abs_error": 0.5709853898946147
+          }
+        ]
       }
     }
   }

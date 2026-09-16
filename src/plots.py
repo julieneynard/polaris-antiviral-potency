@@ -85,3 +85,33 @@ def cv_vs_test_grid(results: dict, out_path: Path, target_labels: dict[str, str]
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
+
+
+def applicability_domain_plot(
+    similarities: np.ndarray,
+    abs_errors: np.ndarray,
+    target_label: str,
+    pearson_r: float,
+    out_path: Path,
+) -> None:
+    """Nearest-neighbor Tanimoto similarity (to the train set) vs. absolute error, with
+    a linear trend line. A downward trend (negative r) means the model does worse on
+    structurally novel test molecules - the applicability-domain effect.
+    """
+    fig, ax = plt.subplots(figsize=(5.5, 4.5))
+
+    ax.scatter(similarities, abs_errors, alpha=0.6, s=25, edgecolor="none")
+
+    slope, intercept = np.polyfit(similarities, abs_errors, 1)
+    x_line = np.array([similarities.min(), similarities.max()])
+    ax.plot(x_line, slope * x_line + intercept, color="firebrick", linewidth=1.5, label="linear trend")
+
+    ax.set_xlabel("Max Tanimoto similarity to nearest training molecule")
+    ax.set_ylabel("Absolute error")
+    ax.set_title(f"{target_label}\nRandomForest, official test fold (Pearson r = {pearson_r:.2f})")
+    ax.legend(loc="upper right", frameon=False)
+    fig.tight_layout()
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path, dpi=150)
+    plt.close(fig)

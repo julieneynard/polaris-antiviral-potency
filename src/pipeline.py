@@ -18,11 +18,12 @@ from typing import Callable
 import numpy as np
 import pandas as pd
 
+from src.applicability_domain import applicability_domain_summary, nearest_neighbor_similarity
 from src.cross_validate import cross_validate
 from src.data import ChronologicalSplit, official_chronological_split
 from src.evaluate import masked_mae
 from src.features import featurize
-from src.plots import PLOTS_DIR, cv_vs_test_grid, parity_plot
+from src.plots import PLOTS_DIR, applicability_domain_plot, cv_vs_test_grid, parity_plot
 from src.train_baseline import RANDOM_SEED, fit_predict_random_forest, fit_predict_ridge
 
 N_CV_SPLITS = 5
@@ -101,6 +102,21 @@ def run_baseline_pipeline(
         parity_path = PLOTS_DIR / f"{task_name}_parity_{_slugify(target_col)}.png"
         parity_plot(y_test, rf_pred, target_label, rf_mae, parity_path)
         print(f"  Saved parity plot to {parity_path}")
+
+        print("  Computing applicability-domain diagnostic (nearest-neighbor Tanimoto similarity) ...")
+        train_smiles = split.train["cxsmiles"].to_numpy()[train_mask].tolist()
+        test_smiles = split.test["cxsmiles"].to_numpy()[test_mask].tolist()
+        similarities = nearest_neighbor_similarity(train_smiles, test_smiles)
+        abs_errors = np.abs(y_test - rf_pred)
+        ad_summary = applicability_domain_summary(similarities, abs_errors)
+        print(f"  Similarity-vs-error Pearson r: {ad_summary['similarity_error_pearson_r']:.3f}")
+        results[target_col]["random_forest_applicability_domain"] = ad_summary
+
+        ad_path = PLOTS_DIR / f"{task_name}_ad_{_slugify(target_col)}.png"
+        applicability_domain_plot(
+            similarities, abs_errors, target_label, ad_summary["similarity_error_pearson_r"], ad_path
+        )
+        print(f"  Saved applicability-domain plot to {ad_path}")
 
     results_path.parent.mkdir(exist_ok=True, parents=True)
     with open(results_path, "w") as f:

@@ -32,6 +32,35 @@
         ],
         "mean_mae": 131.90865548698065,
         "std_mae": 17.563497046729356
+      },
+      "random_forest_applicability_domain": {
+        "similarity_error_pearson_r": -0.24146352587908076,
+        "bins_low_to_high_similarity": [
+          {
+            "similarity_range": [
+              0.155,
+              0.593
+            ],
+            "n": 42,
+            "mean_abs_error": 324.61023969387753
+          },
+          {
+            "similarity_range": [
+              0.593,
+              0.776
+            ],
+            "n": 39,
+            "mean_abs_error": 235.46969400488402
+          },
+          {
+            "similarity_range": [
+              0.776,
+              0.886
+            ],
+            "n": 41,
+            "mean_abs_error": 177.27896076655054
+          }
+        ]
       }
     },
     "HLM": {
@@ -62,6 +91,35 @@
         ],
         "mean_mae": 100.08531660720791,
         "std_mae": 11.381134106075244
+      },
+      "random_forest_applicability_domain": {
+        "similarity_error_pearson_r": -0.035025912480553874,
+        "bins_low_to_high_similarity": [
+          {
+            "similarity_range": [
+              0.155,
+              0.6
+            ],
+            "n": 36,
+            "mean_abs_error": 183.8813517063492
+          },
+          {
+            "similarity_range": [
+              0.6,
+              0.787
+            ],
+            "n": 36,
+            "mean_abs_error": 116.33837724867723
+          },
+          {
+            "similarity_range": [
+              0.787,
+              0.886
+            ],
+            "n": 34,
+            "mean_abs_error": 172.8025386834734
+          }
+        ]
       }
     },
     "KSOL": {
@@ -92,6 +150,35 @@
         ],
         "mean_mae": 68.96067026230999,
         "std_mae": 8.682589394116189
+      },
+      "random_forest_applicability_domain": {
+        "similarity_error_pearson_r": -0.17380644871500753,
+        "bins_low_to_high_similarity": [
+          {
+            "similarity_range": [
+              0.185,
+              0.617
+            ],
+            "n": 38,
+            "mean_abs_error": 77.44434555137843
+          },
+          {
+            "similarity_range": [
+              0.617,
+              0.725
+            ],
+            "n": 37,
+            "mean_abs_error": 31.78042586872586
+          },
+          {
+            "similarity_range": [
+              0.725,
+              0.886
+            ],
+            "n": 37,
+            "mean_abs_error": 61.585993693693666
+          }
+        ]
       }
     },
     "LogD": {
@@ -122,6 +209,35 @@
         ],
         "mean_mae": 0.5475634561493055,
         "std_mae": 0.059905259635302216
+      },
+      "random_forest_applicability_domain": {
+        "similarity_error_pearson_r": -0.5427561532290958,
+        "bins_low_to_high_similarity": [
+          {
+            "similarity_range": [
+              0.162,
+              0.585
+            ],
+            "n": 43,
+            "mean_abs_error": 0.9901541860465103
+          },
+          {
+            "similarity_range": [
+              0.585,
+              0.765
+            ],
+            "n": 41,
+            "mean_abs_error": 0.5992579326364705
+          },
+          {
+            "similarity_range": [
+              0.765,
+              0.886
+            ],
+            "n": 42,
+            "mean_abs_error": 0.40063726757369733
+          }
+        ]
       }
     },
     "MDR1-MDCKII": {
@@ -152,6 +268,35 @@
         ],
         "mean_mae": 2.8272743576959174,
         "std_mae": 0.2666845472327026
+      },
+      "random_forest_applicability_domain": {
+        "similarity_error_pearson_r": -0.32450279145542643,
+        "bins_low_to_high_similarity": [
+          {
+            "similarity_range": [
+              0.185,
+              0.643
+            ],
+            "n": 42,
+            "mean_abs_error": 8.187956973015869
+          },
+          {
+            "similarity_range": [
+              0.643,
+              0.765
+            ],
+            "n": 42,
+            "mean_abs_error": 8.323877604501126
+          },
+          {
+            "similarity_range": [
+              0.765,
+              0.886
+            ],
+            "n": 42,
+            "mean_abs_error": 4.264994369104308
+          }
+        ]
       }
     }
   }
